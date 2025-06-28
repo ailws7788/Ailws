@@ -124,30 +124,13 @@
       setTimeout(() => initMap(loc, numPanels), 300);
     }
 
-   function initMap(locText, total) {
-  const m = locText.match(/\(([-\d.]+),\s*([-\d.]+)\)/);
-  if (!m) return;
-  const lat = +m[1], lon = +m[2];
-
-  // create map centered on your roof coords
-  const map = L.map('roofMap').setView([lat, lon], 19);
-
-  // use Esri World Imagery for satellite base
-  L.tileLayer(
-    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    {
-      attribution: 'Tiles © Esri &mdash; Source: Esri, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community',
-      maxZoom: 19
-    }
-  ).addTo(map);
-
-  // marker
-  L.marker([lat, lon]).addTo(map).bindPopup('Your Roof').openPopup();
-
-  // panel overlays (if any)...
-  // … your existing overlay code …
-}
-
+    function initMap(locText, total) {
+      const m = locText.match(/\(([-\d.]+),\s*([-\d.]+)\)/);
+      if (!m) return;
+      const [_, lat, lon] = m.map(Number);
+      const map = L.map('roofMap').setView([lat, lon], 19);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+      L.marker([lat, lon]).addTo(map).bindPopup('Your Roof').openPopup();
     }
   </script>
 </body>
