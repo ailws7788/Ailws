@@ -74,7 +74,6 @@
       systemSize = lowerBound + 1;
     }
 
-    // 新的价格映射
     const priceMap = {4:16000,5:17500,6:18500,7:20500,8:21500,9:23000,10:25000,11:27000,12:29500,13:31500,14:33500,15:34500,16:36000,17:37500,18:38500};
     function getBucket(size) {
       for (let n = 4; n <= 18; n++) {
@@ -107,6 +106,11 @@
         <tr><th>Roof Space Needed</th><td>${roofSpace} sq ft</td></tr>
         <tr><th>Estimated System Cost</th><td style="color:#cc3300;font-weight:bold;">${estCost}</td></tr>
       </table>
+      <!-- 联系方式 -->
+      <div style="margin-top:12px;padding:12px;background:#eaf4ff;border:1px solid #0077cc;border-radius:10px;text-align:center;font-size:16px;">
+        📞 Speak with our solar consultants today:<br>
+        <span style="font-size:17px; color:#0077cc;">David Lim  📱 016-553 7788</span><br>
+      </div>
       <div id="roofMap"></div>
     `;
 
