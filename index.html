@@ -1,9 +1,8 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>SolarTech Estimator</title>
   <link href="https://unpkg.com/leaflet/dist/leaflet.css" rel="stylesheet"/>
   <style>
@@ -21,110 +20,122 @@
   </style>
 </head>
 <body>
-<div class="container">
-  <div style="text-align:center;">
-    <img alt="SolarTech Logo" src="logo.jpg" style="max-width:360px; border-radius:30px; margin-bottom:30px;"/>
-    <h2>🔆 Solar Savings Estimator</h2>
+  <div class="container">
+    <div style="text-align:center;">
+      <img alt="SolarTech Logo" src="logo.jpg" style="max-width:360px; border-radius:30px; margin-bottom:30px;"/>
+      <h2>🔆 Solar Savings Estimator</h2>
+    </div>
+    <div id="formArea">
+      <label for="customer">Customer Name:</label>
+      <input id="customer" placeholder="e.g. John Tan" type="text"/>
+
+      <label for="location">Installation Location:</label>
+      <!-- Updated placeholder -->
+      <input id="location" placeholder="Auto-detecting location..." readonly type="text"/>
+
+      <label for="bill">Enter your monthly TNB bill (RM):</label>
+      <input id="bill" placeholder="e.g. 600" type="number"/>
+
+      <button onclick="calculate()">Calculate</button>
+    </div>
+    <div id="output"></div>
   </div>
-  <div id="formArea">
-    <label for="customer">Customer Name:</label>
-    <input id="customer" placeholder="e.g. John Tan" type="text"/>
-    <label for="location">Installation Location:</label>
-    <input id="location" placeholder="Detecting..." readonly type="text"/>
-    <label for="bill">Enter your monthly TNB bill (RM):</label>
-    <input id="bill" placeholder="e.g. 600" type="number"/>
-    <button onclick="calculate()">Calculate</button>
-  </div>
-  <div id="output"></div>
-</div>
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script>
-  // 自动检测定位并填充 location 输入框
-  window.onload = function() {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(function(pos) {
-        const lat = pos.coords.latitude.toFixed(6);
-        const lon = pos.coords.longitude.toFixed(6);
-        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
-          .then(res => res.json())
-          .then(data => {
-            const address = data.display_name || "Detected";
-            document.getElementById("location").value = `(${lat}, ${lon}) ${address}`;
-          })
-          .catch(() => {
-            document.getElementById("location").value = `(${lat}, ${lon})`;
-          });
-      });
-    }
-  };
 
-  function calculate() {
-    const customer = document.getElementById("customer").value || "N/A";
-    const location = document.getElementById("location").value || "N/A";
-    const bill = parseFloat(document.getElementById("bill").value);
-
-    if (isNaN(bill) || bill <= 0) {
-      alert("Please enter a valid bill amount.");
-      return;
-    }
-
-    // 用电量和系统大小
-    const kWh = bill / 0.5;
-    let systemSize = kWh / 130;
-    const lowerBound = Math.floor(systemSize);
-    if (systemSize >= lowerBound + 0.23) {
-      systemSize = lowerBound + 1;
-    }
-
-    // 价格映射
-    const priceMap = {4:16000,5:17500,6:18500,7:20500,8:21500,9:23000,10:25000,11:27000,12:29500,13:31500,14:33500,15:34500,16:36000,17:37500,18:38500};
-    function getBucket(size) {
-      for (let n = 4; n <= 18; n++) {
-        if (size <= n + 0.5) return n;
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // 自动检测定位并填充 location 输入框
+    window.onload = function() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(pos) {
+          const lat = pos.coords.latitude.toFixed(6);
+          const lon = pos.coords.longitude.toFixed(6);
+          fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+            .then(res => res.json())
+            .then(data => {
+              const address = data.display_name || "Detected";
+              document.getElementById("location").value = `(${lat}, ${lon}) ${address}`;
+            })
+            .catch(() => {
+              document.getElementById("location").value = `(${lat}, ${lon})`;
+            });
+        });
       }
-      return Math.ceil(size);
-    }
-    const bucket = getBucket(systemSize);
-    const systemCost = priceMap[bucket] || 0;
-    const estCost = "RM " + systemCost.toLocaleString("en-MY");
+    };
 
-    // 面板数量和屋顶空间
-    const panelKW = 0.62;
-    const numPanels = Math.ceil(systemSize / panelKW);
-    const roofSpace = (numPanels * 4 * 8).toFixed(0);
+    function calculate() {
+      const customer = document.getElementById("customer").value || "N/A";
+      const location = document.getElementById("location").value || "N/A";
+      const bill = parseFloat(document.getElementById("bill").value);
 
-    // 隐藏表单，显示结果
-    document.getElementById("formArea").style.display = "none";
-    const output = document.getElementById("output");
-    output.style.display = "block";
-    output.innerHTML = `
-      <h3>📋 Result Summary</h3>
-      <table>
-        <tr><th>Customer Name</th><td>${customer}</td></tr>
-        <tr><th>Location</th><td>${location}</td></tr>
-        <tr><th>Current TNB Bill</th><td>RM ${bill.toFixed(2)}</td></tr>
-        <tr><th>Estimated Monthly Usage</th><td>${kWh.toFixed(0)} kWh</td></tr>
-        <tr><th>Inverter Size</th><td>${systemSize.toFixed(2)} kW</td></tr>
-        <tr><th>Estimated No. of 620W Panels</th><td>${numPanels} units</td></tr>
-        <tr><th>Daily Energy Production</th><td style="color:green;font-weight:bold;">≈ ${numPanels} × 0.62 × 4 = ${(numPanels * 0.62 * 4).toFixed(2)} kWh/day</td></tr>
-        <tr><th>Estimated Monthly Savings</th><td style="color:green;font-weight:bold;">≈ ${(numPanels * 0.62 * 4 * 30).toFixed(2)} kWh/month ≈ RM ${(numPanels * 0.62 * 4 * 30 * 0.5).toFixed(2)}</td></tr>
-        <tr><th>Roof Space Needed</th><td>${roofSpace} sq ft</td></tr>
-        <tr><th>Estimated System Cost</th><td style="color:#cc3300;font-weight:bold;">${estCost}</td></tr>
-      </table>
-      <!-- 联系方式 -->
-      <div style="margin-top:12px;padding:12px;background:#eaf4ff;border:1px solid #0077cc;border-radius:10px;text-align:center;font-size:16px;">
-        📞 Speak with our solar consultants today:<br>
-        <span style="font-size:17px; color:#0077cc;">David Lim  📱 016-553 7788</span><br>
-      </div>
-      <div id="roofMap"></div>
-    `;
+      if (isNaN(bill) || bill <= 0) {
+        alert("Please enter a valid bill amount.");
+        return;
+      }
 
-    // 延迟初始化地图
-    setTimeout(() => {
-      const match = location.match(/\(([-\d.]+),\s*([-\d.]+)\)/);
-      if (match) {
-        const lat = parseFloat(match[1]);
-        const lng = parseFloat(match[2]);
-        const map = L.map('roofMap').setView([lat, lng], 22);
-        const mapboxToken = 'pk.eyJ1IjoibWFjY2hlYW5nNzY4NyIsImEiOiJjbWM3ZHB0cnMwa2ozMm9xMjV6YmM1Mnc0In0.9OOlFHdyLY7SlPphMQt6XQ';
-        L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{
+      // 用电量和系统大小
+      const kWh = bill / 0.5;
+      let systemSize = kWh / 130;
+      const lowerBound = Math.floor(systemSize);
+      if (systemSize >= lowerBound + 0.23) {
+        systemSize = lowerBound + 1;
+      }
+
+      // 价格映射
+      const priceMap = {4:16000,5:17500,6:18500,7:20500,8:21500,9:23000,10:25000,11:27000,12:29500,13:31500,14:33500,15:34500,16:36000,17:37500,18:38500};
+      function getBucket(size) {
+        for (let n = 4; n <= 18; n++) {
+          if (size <= n + 0.5) return n;
+        }
+        return Math.ceil(size);
+      }
+      const bucket = getBucket(systemSize);
+      const systemCost = priceMap[bucket] || 0;
+      const estCost = "RM " + systemCost.toLocaleString("en-MY");
+
+      // 面板数量和屋顶空间
+      const panelKW = 0.62;
+      const numPanels = Math.ceil(systemSize / panelKW);
+      const roofSpace = (numPanels * 4 * 8).toFixed(0);
+
+      // 隐藏表单，显示结果
+      document.getElementById("formArea").style.display = "none";
+      const output = document.getElementById("output");
+      output.style.display = "block";
+      output.innerHTML = `
+        <h3>📋 Result Summary</h3>
+        <table>
+          <tr><th>Customer Name</th><td>${customer}</td></tr>
+          <tr><th>Location</th><td>${location}</td></tr>
+          <tr><th>Current TNB Bill</th><td>RM ${bill.toFixed(2)}</td></tr>
+          <tr><th>Estimated Monthly Usage</th><td>${kWh.toFixed(0)} kWh</td></tr>
+          <tr><th>Inverter Size</th><td>${systemSize.toFixed(2)} kW</td></tr>
+          <tr><th>Estimated No. of 620W Panels</th><td>${numPanels} units</td></tr>
+          <tr><th>Daily Energy Production</th><td style="color:green;font-weight:bold;">≈ ${numPanels} × 0.62 × 4 = ${(numPanels * 0.62 * 4).toFixed(2)} kWh/day</td></tr>
+          <tr><th>Estimated Monthly Savings</th><td style="color:green;font-weight:bold;">≈ ${(numPanels * 0.62 * 4 * 30).toFixed(2)} kWh/month ≈ RM ${(numPanels * 0.62 * 4 * 30 * 0.5).toFixed(2)}</td></tr>
+          <tr><th>Roof Space Needed</th><td>${roofSpace} sq ft</td></tr>
+          <tr><th>Estimated System Cost</th><td style="color:#cc3300;font-weight:bold;">${estCost}</td></tr>
+        </table>
+        <!-- 联系方式 -->
+        <div style="margin-top:12px;padding:12px;background:#eaf4ff;border:1px solid #0077cc;border-radius:10px;text-align:center;font-size:16px;">
+          📞 Speak with our solar consultants today:<br>
+          <span style="font-size:17px; color:#0077cc;">David Lim  📱 016-553 7788</span><br>
+        </div>
+        <div id="roofMap"></div>
+      `;
+
+      // 延迟初始化地图
+      setTimeout(() => {
+        const match = location.match(/\(([-\d.]+),\s*([-\d.]+)\)/);
+        if (match) {
+          const lat = parseFloat(match[1]);
+          const lng = parseFloat(match[2]);
+          const map = L.map('roofMap').setView([lat, lng], 22);
+          const mapboxToken = 'pk.eyJ1IjoibWFjY2hlYW5nNzY4NyIsImEiOiJjbWM3ZHB0cnMwa2ozMm9xMjV6YmM1Mnc0In0.9OOlFHdyLY7SlPphMQt6XQ';
+          L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`, {
+            tileSize:512,
+            zoomOffset:-1,
+            attribution:'&copy; <a href="https://www.mapbox.com/">Mapbox</a>'
+          }).addTo(map);
+          L.marker([lat, lng]).addTo(map).bindPopup("Your Roof").openPopup();
+        }
+      },
