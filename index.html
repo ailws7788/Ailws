@@ -1,127 +1,148 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>SolarTech Estimator</title>
-
-  <!-- Leaflet 样式 -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-  <!-- Leaflet.draw 样式 -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
-
+  <link href="https://unpkg.com/leaflet/dist/leaflet.css" rel="stylesheet"/>
   <style>
-    body { font-family: 'Segoe UI', sans-serif; background: #f1f8fc; margin:0; padding:20px; color:#333; }
-    .container { max-width:700px; margin:auto; background:#fff; padding:30px; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.1); }
+    body { font-family: 'Segoe UI', sans-serif; background: #f1f8fc; padding: 20px; color: #333; }
+    .container { max-width:700px; margin:auto; background:#fff; padding:30px; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.1);}
     h2 { text-align:center; color:#0077cc; margin-bottom:20px; }
     label,input,button { display:block; width:100%; margin-top:10px; font-size:16px; }
     input { padding:10px; border:1px solid #ccc; border-radius:6px; }
-    button { margin-top:15px; padding:12px; background:#0077cc; color:#fff; border:none; border-radius:6px; cursor:pointer; }
+    input[readonly] { background:#eee; }
+    button { margin-top:15px; background:#0077cc; color:#fff; padding:12px; border:none; border-radius:6px; cursor:pointer; }
     #output { display:none; margin-top:30px; }
-    #roofMap { height:400px; width:100%; margin-top:20px; border:1px solid #ccc; border-radius:8px; }
+    table { width:100%; border-collapse:collapse; margin-top:15px; }
+    th,td { padding:10px; border:1px solid #ddd; }
+    th { background:#f4f4f4; text-align:left; }
+    #roofMap { height:400px; width:100%; border:1px solid #ccc; border-radius:8px; margin-top:20px; }
   </style>
 </head>
 <body>
 
   <div class="container">
-    <img src="logo.jpg" onerror="this.onerror=null;this.src='images/logo.png';"
-         alt="SolarTech Logo" style="width:200px; display:block; margin:0 auto 10px;"/>
-    <h2>🔆 Solar Savings Estimator</h2>
+    <div style="text-align:center;">
+      <img src="logo.jpg"
+           onerror="this.onerror=null; this.src='images/logo.png';"
+           alt="SolarTech Logo"
+           style="max-width:160px; border-radius:10px; margin-bottom:10px;"/>
+      <h2>🔆 Solar Savings Estimator</h2>
+    </div>
 
-    <label for="customer">Customer Name:</label>
-    <input id="customer" placeholder="e.g. John Tan"/>
+    <div id="formArea">
+      <label for="customer">Customer Name:</label>
+      <input id="customer" placeholder="e.g. John Tan" type="text"/>
 
-    <label for="location">Installation Location:</label>
-    <input id="location" placeholder="输入或自动检测位置"/>
+      <label for="location">Installation Location:</label>
+      <input id="location" placeholder="Detecting..." readonly type="text"/>
 
-    <label for="bill">Enter your monthly TNB bill (RM):</label>
-    <input id="bill" type="number" placeholder="e.g. 600"/>
+      <label for="bill">Enter your monthly TNB bill (RM):</label>
+      <input id="bill" placeholder="e.g. 600" type="number"/>
 
-    <button onclick="calculate()">Calculate &amp; Draw Panels</button>
+      <button onclick="calculate()">Calculate &amp; Draw Panels</button>
+    </div>
 
     <div id="output"></div>
   </div>
 
-  <!-- 地图容器 -->
   <div id="roofMap"></div>
 
-  <!-- Leaflet & Draw 脚本 -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
   <script>
-    // 自动定位填充 location 输入框
+    // 自动定位填充 Location 输入框（仅在 HTTPS 或 localhost 下有效）
     window.addEventListener('load', () => {
       if (!navigator.geolocation) return;
       navigator.geolocation.getCurrentPosition(pos => {
         const lat = pos.coords.latitude.toFixed(6),
               lon = pos.coords.longitude.toFixed(6),
               url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`;
-        fetch(url).then(r=>r.json()).then(data=>{
-          const el = document.getElementById('location');
-          if (!el.value) el.value = `(${lat}, ${lon}) `+(data.display_name||'');
-        });
+        fetch(url)
+          .then(r => r.json())
+          .then(data => {
+            const inp = document.getElementById('location');
+            if (!inp.value) inp.value = `(${lat}, ${lon}) ` + (data.display_name||'');
+          })
+          .catch(() => {
+            const inp = document.getElementById('location');
+            if (!inp.value) inp.value = `(${lat}, ${lon})`;
+          });
+      }, () => {
+        console.warn('定位失败或被拒绝');
       });
     });
 
     let map, drawnItems;
 
+    // 点击按钮时初始化地图并提示画屋顶
     function calculate() {
-      // 隐藏输出区
       document.getElementById('output').style.display = 'none';
-      // 先初始化或重置地图
       initMap();
-
-      // 这里可以放更多计算结果到 output……
-      document.getElementById('output').innerHTML = '<p>请用左侧画笔工具在地图上框选屋顶区域。</p>';
+      document.getElementById('output').innerHTML = '<p>请在地图左上角选择“多边形”工具，绘制屋顶区域：</p>';
       document.getElementById('output').style.display = 'block';
     }
 
     function initMap() {
-      if (map) map.remove();  // 清除旧地图
-      map = L.map('roofMap').setView([4.5774,101.1275], 19);
+      // 如果已存在地图，则先销毁
+      if (map) map.remove();
 
-      // 卫星底图
+      // 以定位点或默认中心初始化
+      let center = [4.5746,101.1275];
+      const locVal = document.getElementById('location').value;
+      const m = locVal.match(/\(([-\d.]+),\s*([-\d.]+)\)/);
+      if (m) center = [+m[1], +m[2]];
+
+      map = L.map('roofMap').setView(center, 19);
+
+      // 卫星影像底图（Esri）
       L.tileLayer(
         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        { attribution:'Tiles © Esri', maxZoom: 19 }
+        { attribution:'Tiles © Esri', maxZoom:19 }
       ).addTo(map);
 
-      // 画图图层
+      // 用于绘图的图层
       drawnItems = new L.FeatureGroup();
       map.addLayer(drawnItems);
 
-      // Draw 控件
-      const drawControl = new L.Control.Draw({
-        draw: { polyline:false, circle:false, circlemarker:false, marker:false, rectangle:false, polygon:{allowIntersection:false, showArea:true} },
-        edit: { featureGroup: drawnItems, remove:true }
-      });
-      map.addControl(drawControl);
+      // 添加 Draw 控件，仅启用多边形
+      new L.Control.Draw({
+        draw: {
+          polyline:false, circle:false, marker:false, rectangle:false, circlemarker:false,
+          polygon:{ allowIntersection:false, showArea:true }
+        },
+        edit:{ featureGroup:drawnItems, remove:true }
+      }).addTo(map);
 
-      // 创建完成时绘制面板
-      map.on(L.Draw.Event.CREATED, function(e){
+      // 完成绘制后自动铺排面板
+      map.on(L.Draw.Event.CREATED, e => {
         drawnItems.clearLayers();
-        const polygon = e.layer;
-        drawnItems.addLayer(polygon);
-        drawPanels(polygon);
+        const poly = e.layer;
+        drawnItems.addLayer(poly);
+        drawPanels(poly);
       });
     }
 
-    // 在多边形内部等距铺排面板（示例：每块约0.00004度大小）
+    // 在多边形内等距铺排面板（示例网格大小可自行调整）
     function drawPanels(polygon) {
       const bounds = polygon.getBounds();
-      const dx = 0.00004, dy = 0.00004;
+      const dx = 0.00006, dy = 0.00004;  // lat/lon 墙板大小
+      const total = Math.ceil(bounds.getArea ? bounds.getArea()/1e-6 : 12); // 可改为更精准算法
 
       for (let lat=bounds.getSouth(); lat<bounds.getNorth(); lat+=dy) {
         for (let lon=bounds.getWest(); lon<bounds.getEast(); lon+=dx) {
           const pt = L.latLng(lat, lon);
-          if (polygon.getBounds().contains(pt) && polygon.getLatLngs()[0].some(polyPt=>polygon.contains(pt))) {
-            // 用黄色半透明矩形表示面板
-            const sw = [lat, lon], ne = [lat+dy, lon+dx];
-            L.rectangle([sw, ne], {color:'#ffaa00', weight:1, fillOpacity:0.6}).addTo(map);
+          if (polygon.getBounds().contains(pt) && leafletPip.pointInLayer([lon,lat], polygon).length) {
+            // 矩形面板覆盖
+            const sw=[lat,lon], ne=[lat+dy, lon+dx];
+            L.rectangle([sw, ne], { color:'#ffaa00', weight:1, fillOpacity:0.6 }).addTo(map);
           }
         }
       }
     }
   </script>
+  <!-- leaflet-pip 库用来判断点是否在多边形内 -->
+  <script src="https://unpkg.com/leaflet-pip/leaflet-pip.min.js"></script>
 </body>
 </html>
