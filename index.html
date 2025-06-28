@@ -1,129 +1,131 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SolarTech Estimator</title>
-  <link href="https://unpkg.com/leaflet/dist/leaflet.css" rel="stylesheet"/>
-  <style>
-    body { font-family:'Segoe UI',sans-serif; background:#f1f8fc; padding:20px; color:#333; }
-    .container { max-width:700px; margin:auto; background:#fff; padding:30px; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.1); }
-    h2 { text-align:center; color:#0077cc; margin-bottom:20px; }
-    label,input,button { display:block; width:100%; margin-top:10px; font-size:16px; }
-    input { padding:10px; border:1px solid #ccc; border-radius:6px; }
-    input[readonly] { background:#eee; }
-    button { margin-top:15px; padding:12px; background:#0077cc; color:#fff; border:none; border-radius:6px; cursor:pointer; }
-    #output { display:none; margin-top:30px; }
-    table { width:100%; border-collapse:collapse; margin-top:15px; }
-    th,td { padding:10px; border:1px solid #ddd; }
-    th { background:#f4f4f4; text-align:left; }
-    #roofMap { height:400px; width:100%; margin-top:20px; border:1px solid #ccc; border-radius:8px; }
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SolarTech Estimator</title>
+<link href="https://unpkg.com/leaflet/dist/leaflet.css" rel="stylesheet"/>
+<style>
+    body { font-family: 'Segoe UI', sans-serif; background: #f1f8fc; padding: 20px; color: #333; }
+    .container { max-width: 700px; margin: auto; background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    h2 { text-align: center; color: #0077cc; margin-bottom: 20px; }
+    label, input, button { display: block; width: 100%; margin-top: 10px; font-size: 16px; }
+    input { padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 6px; }
+    button { background-color: #0077cc; color: white; padding: 12px; border: none; border-radius: 6px; cursor: pointer; }
+    #output { display: none; margin-top: 30px; font-size: 16px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    th, td { padding: 10px; border: 1px solid #ddd; }
+    th { background: #f4f4f4; text-align: left; }
+    #roofMap { height: 400px; width: 100%; border: 1px solid #ccc; border-radius: 8px; margin-top: 20px; }
   </style>
 </head>
 <body>
-
-  <div class="container">
-    <div style="text-align:center;">
-      <img src="logo.jpg" onerror="this.onerror=null;this.src='images/logo.png';"
-           alt="Logo" style="max-width:160px; border-radius:6px; margin-bottom:10px;"/>
-      <h2>🔆 Solar Savings Estimator</h2>
-    </div>
-
-    <div id="formArea">
-      <label for="customer">Customer Name:</label>
-      <input id="customer" placeholder="e.g. John Tan" type="text"/>
-
-      <label for="location">Installation Location:</label>
-      <input id="location" placeholder="Detecting..." readonly type="text"/>
-
-      <label for="bill">Enter your monthly TNB bill (RM):</label>
-      <input id="bill" placeholder="e.g. 600" type="number"/>
-
-      <button onclick="calculate()">Calculate &amp; Show Map</button>
-    </div>
-
-    <div id="output"></div>
+<div class="container">
+  <div style="text-align:center;">
+    <img alt="SolarTech Logo" src="logo.jpg" style="max-width:160px; border-radius:10px; margin-bottom:10px;"/>
+    <h2>🔆 Solar Savings Estimator</h2>
   </div>
-
-  <div id="roofMap"></div>
-
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script>
-    // 自动检测定位并填充 location 输入框
-    window.addEventListener('load', () => {
-      if (!navigator.geolocation) return;
-      navigator.geolocation.getCurrentPosition(pos => {
-        const lat = pos.coords.latitude.toFixed(6),
-              lng = pos.coords.longitude.toFixed(6);
-        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)
-          .then(r=>r.json())
+  <div id="formArea">
+    <label for="customer">Customer Name:</label>
+    <input id="customer" placeholder="e.g. John Tan" type="text"/>
+    <label for="location">Installation Location:</label>
+    <input id="location" placeholder="Detecting..." readonly type="text"/>
+    <label for="bill">Enter your monthly TNB bill (RM):</label>
+    <input id="bill" placeholder="e.g. 600" type="number"/>
+    <button onclick="calculate()">Calculate</button>
+  </div>
+  <div id="output"></div>
+</div>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+  window.onload = function() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(function(pos) {
+        const lat = pos.coords.latitude.toFixed(6);
+        const lon = pos.coords.longitude.toFixed(6);
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+          .then(res => res.json())
           .then(data => {
-            const inp = document.getElementById('location');
-            if (!inp.value) inp.value = `(${lat}, ${lng}) ` + (data.display_name||'');
+            const address = data.display_name || "Detected";
+            document.getElementById("location").value = `(${lat}, ${lon}) ${address}`;
           })
-          .catch(()=>{
-            const inp = document.getElementById('location');
-            if (!inp.value) inp.value = `(${lat}, ${lng})`;
+          .catch(() => {
+            document.getElementById("location").value = `(${lat}, ${lon})`;
           });
-      }, () => console.warn('定位失败或被拒绝'));
-    });
+      });
+    }
+  };
 
-    let map;
+  function calculate() {
+    const customer = document.getElementById("customer").value || "N/A";
+    const location = document.getElementById("location").value || "N/A";
+    const bill = parseFloat(document.getElementById("bill").value);
 
-    function calculate() {
-      const cust = document.getElementById('customer').value||'N/A';
-      const loc  = document.getElementById('location').value||'N/A';
-      const bill = parseFloat(document.getElementById('bill').value);
-      if (isNaN(bill)||bill<=0) return alert('请输入有效账单金额');
-
-      const kWh = bill/0.5;
-      let sysSize = kWh/130;
-      const lb = Math.floor(sysSize);
-      if (sysSize >= lb+0.23) sysSize = lb+1;
-
-      const priceMap = {4:16000,5:17500,6:18500,7:20500,8:21500,9:23000,10:25000,11:27000,12:29500,13:31500,14:33500,15:34500,16:36000,17:37500,18:38500};
-      const getBucket = size => { for(let n=4;n<=18;n++) if(size<=n+0.5) return n; return Math.ceil(size); };
-      const bucket = getBucket(sysSize);
-      let systemCost = priceMap[bucket]||sysSize*(sysSize>=10?2850:sysSize>=9?3100:sysSize>=8?3400:sysSize>=7?3600:sysSize>=6?4000:4500);
-      const estCost = 'RM '+systemCost.toLocaleString('en-MY');
-      const panelCount = Math.ceil(sysSize/0.62);
-      const roofSpace = (panelCount*4*8).toFixed(0);
-
-      document.getElementById('formArea').style.display='none';
-      const out = document.getElementById('output');
-      out.style.display='block';
-      out.innerHTML = `
-        <h3>📋 Result Summary</h3>
-        <table>
-          <tr><th>Customer Name</th><td>${cust}</td></tr>
-          <tr><th>Location</th><td>${loc}</td></tr>
-          <tr><th>Current Bill</th><td>RM ${bill.toFixed(2)}</td></tr>
-          <tr><th># of 620W Panels</th><td>${panelCount} units</td></tr>
-          <tr><th>Est. System Cost</th><td style="color:#cc3300;font-weight:bold;">${estCost}</td></tr>
-          <tr><th>Roof Space Needed</th><td>${roofSpace} sq ft</td></tr>
-        </table>`;
-      initMap();
+    if (isNaN(bill) || bill <= 0) {
+      alert("Please enter a valid bill amount.");
+      return;
     }
 
-    function initMap() {
-      let center=[4.5746,101.1275];
-      const locVal=document.getElementById('location').value;
-      const m=locVal.match(/\(([-\d.]+),\s*([-\d.]+)\)/);
-      if(m) center=[+m[1],+m[2]];
-
-      if(map) map.remove();
-      map=L.map('roofMap').setView(center,19);
-
-      // Mapbox 卫星底图
-      const token='pk.eyJ1IjoibWFjY2hlYW5nNzY4NyIsImEiOiJjbWM3ZHB0cnMwa2ozMm9xMjV6YmM1Mnc0In0.9OOlFHdyLY7SlPphMQt6XQ';
-      L.tileLayer(
-        `https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token=${token}`,
-        { tileSize:512, zoomOffset:-1, attribution:'&copy; Mapbox' }
-      ).addTo(map);
-
-      // 屋顶标记
-      L.marker(center).addTo(map).bindPopup('Your Roof').openPopup();
+    const kWh = bill / 0.5;
+    let systemSize = kWh / 130;
+    const lowerBound = Math.floor(systemSize);
+    if (systemSize >= lowerBound + 0.23) {
+      systemSize = lowerBound + 1;
     }
-  </script>
+
+    // 新的价格映射
+    const priceMap = {4:16000,5:17500,6:18500,7:20500,8:21500,9:23000,10:25000,11:27000,12:29500,13:31500,14:33500,15:34500,16:36000,17:37500,18:38500};
+    function getBucket(size) {
+      for (let n = 4; n <= 18; n++) {
+        if (size <= n + 0.5) return n;
+      }
+      return Math.ceil(size);
+    }
+    const bucket = getBucket(systemSize);
+    const systemCost = priceMap[bucket] || 0;
+    const estCost = "RM " + systemCost.toLocaleString("en-MY");
+
+    const panelKW = 0.62;
+    const numPanels = Math.ceil(systemSize / panelKW);
+    const roofSpace = (numPanels * 4 * 8).toFixed(0);
+
+    document.getElementById("formArea").style.display = "none";
+    const output = document.getElementById("output");
+    output.style.display = "block";
+    output.innerHTML = `
+      <h3>📋 Result Summary</h3>
+      <table>
+        <tr><th>Customer Name</th><td>${customer}</td></tr>
+        <tr><th>Location</th><td>${location}</td></tr>
+        <tr><th>Current TNB Bill</th><td>RM ${bill.toFixed(2)}</td></tr>
+        <tr><th>Estimated Monthly Usage</th><td>${kWh.toFixed(0)} kWh</td></tr>
+        <tr><th>Inverter Size</th><td>${systemSize.toFixed(2)} kW</td></tr>
+        <tr><th>Estimated No. of 620W Panels</th><td>${numPanels} units</td></tr>
+        <tr><th>Daily Energy Production</th><td style="color:green;font-weight:bold;">≈ ${numPanels} × 0.62 × 4 = ${(numPanels * 0.62 * 4).toFixed(2)} kWh/day</td></tr>
+        <tr><th>Estimated Monthly Savings</th><td style="color:green;font-weight:bold;">≈ ${(numPanels * 0.62 * 4 * 30).toFixed(2)} kWh/month ≈ RM ${(numPanels * 0.62 * 4 * 30 * 0.5).toFixed(2)}</td></tr>
+        <tr><th>Roof Space Needed</th><td>${roofSpace} sq ft</td></tr>
+        <tr><th>Estimated System Cost</th><td style="color:#cc3300;font-weight:bold;">${estCost}</td></tr>
+      </table>
+      <div id="roofMap"></div>
+    `;
+
+    setTimeout(() => {
+      const match = location.match(/\(([-\d.]+),\s*([-\d.]+)\)/);
+      if (match) {
+        const lat = parseFloat(match[1]);
+        const lng = parseFloat(match[2]);
+        const map = L.map('roofMap').setView([lat, lng], 22);
+        const mapboxToken = 'pk.eyJ1IjoibWFjY2hlYW5nNzY4NyIsImEiOiJjbWM3ZHB0cnMwa2ozMm9xMjV6YmM1Mnc0In0.9OOlFHdyLY7SlPphMQt6XQ';
+        L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`, {
+          tileSize:512,
+          zoomOffset:-1,
+          attribution:'&copy; <a href="https://www.mapbox.com/">Mapbox</a>'
+        }).addTo(map);
+        L.marker([lat, lng]).addTo(map).bindPopup("Your Roof").openPopup();
+      }
+    }, 300);
+  }
+</script>
 </body>
 </html>
