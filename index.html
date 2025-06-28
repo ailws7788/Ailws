@@ -89,31 +89,32 @@
       document.getElementById("formArea").style.display = "none";
       const out = document.getElementById("output"); out.style.display = "block";
       out.innerHTML = `
-        <h3>📋 Result Summary</h3>
-        <table>
-          <tr><th>Customer Name</th><td>${cust}</td></tr>
-          <tr><th>Location</th><td>${loc}</td></tr>
-          <tr><th>Current TNB Bill</th><td>RM ${bill.toFixed(2)}</td></tr>
-          <tr><th>Estimated Monthly Usage</th><td>${kWh.toFixed(0)} kWh</td></tr>
-          <tr><th>Inverter Size</th><td>${sysSize.toFixed(2)} kW</td></tr>
-          <tr><th># of 620W Panels</th><td>${numPanels} units</td></tr>
-          <tr><th>Daily Production</th><td style="color:green;font-weight:bold;">≈ ${numPanels}×0.62×4 = ${(numPanels*0.62*4).toFixed(2)} kWh/day</td></tr>
-          <tr><th>Monthly Savings</th><td style="color:green;font-weight:bold;">≈ ${(numPanels*0.62*4*30).toFixed(2)} kWh/month ≈ RM ${(numPanels*0.62*4*30*0.5).toFixed(2)}</td></tr>
-          <tr><th>Roof Space Needed</th><td>${roofSpace} sq ft</td></tr>
-          <tr><th>Est. System Cost</th><td style="color:#cc3300;font-weight:bold;">${estCost}</td></tr>
-          <tr>
-  <td colspan="2">
-    <div style="margin-top:12px; padding:12px; background:#eaf4ff; border:1px solid #0077cc; border-radius:10px; text-align:center; font-size:16px;">
-      <span style="color:#cc0000;">📞</span>
-      <span style="color:#004080;"> Speak with our Solar Consultant:</span><br>
-      <span style="color:#0077cc; font-weight:bold;">
-        DavidLim <span style="color:#0077cc;">📱</span> 016-553-7788
-      </span>
-    </div>
-  </td>
-</tr>
-        <div id="roofMap"></div>
-      `;
+       <h3>📋 Result Summary</h3>
+  <table>
+    <tr><th>Customer Name</th><td>${cust}</td></tr>
+    <tr><th>Location</th><td>${loc}</td></tr>
+    <tr><th>Current TNB Bill</th><td>RM ${bill.toFixed(2)}</td></tr>
+    <tr><th>Estimated Monthly Usage</th><td>${kWh.toFixed(0)} kWh</td></tr>
+    <tr><th>Inverter Size</th><td>${sysSize.toFixed(2)} kW</td></tr>
+    <tr><th># of 620W Panels</th><td>${numPanels} units</td></tr>
+    <tr><th>Daily Production</th><td style="color:green;font-weight:bold;">≈ ${numPanels}×0.62×4 = ${(numPanels*0.62*4).toFixed(2)} kWh/day</td></tr>
+    <tr><th>Monthly Savings</th><td style="color:green;font-weight:bold;">≈ ${(numPanels*0.62*4*30).toFixed(2)} kWh/month ≈ RM ${(numPanels*0.62*4*30*0.5).toFixed(2)}</td></tr>
+    <tr><th>Roof Space Needed</th><td>${roofSpace} sq ft</td></tr>
+    <tr><th>Est. System Cost</th><td style="color:#cc3300;font-weight:bold;">${estCost}</td></tr>
+    <tr>
+      <td colspan="2">
+        <div style="margin-top:12px; padding:12px; background:#eaf4ff; border:1px solid #0077cc; border-radius:10px; text-align:center; font-size:16px;">
+          <span style="color:#cc0000;">📞</span>
+          <span style="color:#004080;"> Speak with our Solar Consultant:</span><br>
+          <span style="color:#0077cc; font-weight:bold;">
+            DavidLim <span style="color:#0077cc;">📱</span> 016-553-7788
+          </span>
+        </div>
+      </td>
+    </tr>
+  </table>
+  <div id="roofMap"></div>
+`;
       setTimeout(() => initMap(loc, numPanels), 300);
     }
 
