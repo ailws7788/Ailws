@@ -2,11 +2,11 @@
 
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>SolarTech Estimator</title>
-<link href="https://unpkg.com/leaflet/dist/leaflet.css" rel="stylesheet"/>
-<style>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>SolarTech Estimator</title>
+  <link href="https://unpkg.com/leaflet/dist/leaflet.css" rel="stylesheet"/>
+  <style>
     body { font-family: 'Segoe UI', sans-serif; background: #f1f8fc; padding: 20px; color: #333; }
     .container { max-width: 700px; margin: auto; background: #fff; padding: 30px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
     h2 { text-align: center; color: #0077cc; margin-bottom: 20px; }
@@ -88,9 +88,6 @@
     const systemCost = priceMap[bucket] || 0;
     const estCost = "RM " + systemCost.toLocaleString("en-MY");
 
-    // 每kW成本
-    const costPerKW = systemSize > 0 ? (systemCost / systemSize).toFixed(2) : 0;
-
     // 面板数量和屋顶空间
     const panelKW = 0.62;
     const numPanels = Math.ceil(systemSize / panelKW);
@@ -108,7 +105,6 @@
         <tr><th>Current TNB Bill</th><td>RM ${bill.toFixed(2)}</td></tr>
         <tr><th>Estimated Monthly Usage</th><td>${kWh.toFixed(0)} kWh</td></tr>
         <tr><th>Inverter Size</th><td>${systemSize.toFixed(2)} kW</td></tr>
-        <tr><th>Cost per kW</th><td>RM ${costPerKW}</td></tr>
         <tr><th>Estimated No. of 620W Panels</th><td>${numPanels} units</td></tr>
         <tr><th>Daily Energy Production</th><td style="color:green;font-weight:bold;">≈ ${numPanels} × 0.62 × 4 = ${(numPanels * 0.62 * 4).toFixed(2)} kWh/day</td></tr>
         <tr><th>Estimated Monthly Savings</th><td style="color:green;font-weight:bold;">≈ ${(numPanels * 0.62 * 4 * 30).toFixed(2)} kWh/month ≈ RM ${(numPanels * 0.62 * 4 * 30 * 0.5).toFixed(2)}</td></tr>
@@ -131,15 +127,4 @@
         const lng = parseFloat(match[2]);
         const map = L.map('roofMap').setView([lat, lng], 22);
         const mapboxToken = 'pk.eyJ1IjoibWFjY2hlYW5nNzY4NyIsImEiOiJjbWM3ZHB0cnMwa2ozMm9xMjV6YmM1Mnc0In0.9OOlFHdyLY7SlPphMQt6XQ';
-        L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{z}/{x}/{y}?access_token=${mapboxToken}`, {
-          tileSize:512,
-          zoomOffset:-1,
-          attribution:'&copy; <a href="https://www.mapbox.com/">Mapbox</a>'
-        }).addTo(map);
-        L.marker([lat, lng]).addTo(map).bindPopup("Your Roof").openPopup();
-      }
-    }, 300);
-  }
-</script>
-</body>
-</html>
+        L.tileLayer(`https://api.mapbox.com/styles/v1/mapbox/satellite-v9/tiles/{
