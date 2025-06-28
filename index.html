@@ -6,166 +6,119 @@
   <title>SolarTech Estimator</title>
 
   <!-- Leaflet 样式 -->
-  <link href="https://unpkg.com/leaflet/dist/leaflet.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <!-- Leaflet.draw 样式 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+
   <style>
-    body { font-family: 'Segoe UI', sans-serif; background: #f1f8fc; padding: 20px; color: #333; }
-    .container { max-width: 700px; margin: auto; background: #fff; padding: 30px; border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    h2 { text-align: center; color: #0077cc; margin-bottom: 20px; }
-    label, input, button { display: block; width: 100%; margin-top: 10px; font-size: 16px; }
-    input { padding: 10px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 6px; }
-    button { background: #0077cc; color: #fff; padding: 12px; border: none; border-radius: 6px; cursor: pointer; }
-    #output { display: none; margin-top: 30px; font-size: 16px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { padding: 10px; border: 1px solid #ddd; }
-    th { background: #f4f4f4; text-align: left; }
-    #roofMap { height: 400px; width: 100%; border: 1px solid #ccc; border-radius: 8px; margin-top: 20px; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f1f8fc; margin:0; padding:20px; color:#333; }
+    .container { max-width:700px; margin:auto; background:#fff; padding:30px; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.1); }
+    h2 { text-align:center; color:#0077cc; margin-bottom:20px; }
+    label,input,button { display:block; width:100%; margin-top:10px; font-size:16px; }
+    input { padding:10px; border:1px solid #ccc; border-radius:6px; }
+    button { margin-top:15px; padding:12px; background:#0077cc; color:#fff; border:none; border-radius:6px; cursor:pointer; }
+    #output { display:none; margin-top:30px; }
+    #roofMap { height:400px; width:100%; margin-top:20px; border:1px solid #ccc; border-radius:8px; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div style="text-align:center;">
-      <!-- 显示 logo.jpg，若不存在则降级到 images/logo.png -->
-      <img src="logo.jpg"
-           onerror="this.onerror=null; this.src='images/logo.png';"
-           alt="SolarTech Logo"
-           style="width:380px; max-width:100%; height:auto; border-radius:10px; margin:0 auto 10px; display:block;"/>
-      <h2>🔆 Solar Savings Estimator</h2>
-    </div>
-  </div>
 
-  <!-- 输入表单区域 -->
-  <div id="formArea">
+  <div class="container">
+    <img src="logo.jpg" onerror="this.onerror=null;this.src='images/logo.png';"
+         alt="SolarTech Logo" style="width:200px; display:block; margin:0 auto 10px;"/>
+    <h2>🔆 Solar Savings Estimator</h2>
+
     <label for="customer">Customer Name:</label>
-    <input id="customer" placeholder="e.g. John Tan" type="text"/>
+    <input id="customer" placeholder="e.g. John Tan"/>
 
     <label for="location">Installation Location:</label>
-    <input id="location" placeholder="Enter or auto-detect your location" type="text"/>
+    <input id="location" placeholder="输入或自动检测位置"/>
 
     <label for="bill">Enter your monthly TNB bill (RM):</label>
-    <input id="bill" placeholder="e.g. 600" type="number"/>
+    <input id="bill" type="number" placeholder="e.g. 600"/>
 
-    <button onclick="calculate()">Calculate</button>
+    <button onclick="calculate()">Calculate &amp; Draw Panels</button>
+
+    <div id="output"></div>
   </div>
 
-  <!-- 结果显示区域 -->
-  <div id="output"></div>
   <!-- 地图容器 -->
   <div id="roofMap"></div>
 
-  <!-- Leaflet 脚本 -->
+  <!-- Leaflet & Draw 脚本 -->
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
   <script>
-    // 页面加载时尝试自动定位
+    // 自动定位填充 location 输入框
     window.addEventListener('load', () => {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(pos => {
-          const lat = pos.coords.latitude.toFixed(6);
-          const lon = pos.coords.longitude.toFixed(6);
-          fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
-            .then(r => r.json())
-            .then(data => {
-              const loc = document.getElementById('location');
-              if (!loc.value) loc.value = `(${lat}, ${lon}) ` + (data.display_name || '');
-            })
-            .catch(() => {
-              const loc = document.getElementById('location');
-              if (!loc.value) loc.value = `(${lat}, ${lon})`;
-            });
-        }, err => {
-          console.warn('定位失败或被拒绝');
+      if (!navigator.geolocation) return;
+      navigator.geolocation.getCurrentPosition(pos => {
+        const lat = pos.coords.latitude.toFixed(6),
+              lon = pos.coords.longitude.toFixed(6),
+              url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`;
+        fetch(url).then(r=>r.json()).then(data=>{
+          const el = document.getElementById('location');
+          if (!el.value) el.value = `(${lat}, ${lon}) `+(data.display_name||'');
         });
-      }
+      });
     });
 
-    // 点击计算按钮时调用
+    let map, drawnItems;
+
     function calculate() {
-      const cust = document.getElementById('customer').value || 'N/A';
-      const loc  = document.getElementById('location').value || 'N/A';
-      const bill = parseFloat(document.getElementById('bill').value);
-      if (isNaN(bill) || bill <= 0) {
-        return alert('请输入有效的账单金额');
-      }
+      // 隐藏输出区
+      document.getElementById('output').style.display = 'none';
+      // 先初始化或重置地图
+      initMap();
 
-      // 用你的算法计算 kWh、系统大小、成本、面板数量等
-      const kWh = bill / 0.5;
-      let sysSize = kWh / 130;
-      const lb = Math.floor(sysSize);
-      if (sysSize >= lb + 0.23) sysSize = lb + 1;
-
-      const priceMap = {4:16000,5:17500,6:18500,7:20500,8:21500,9:23000,10:25000,11:27000,12:29500,13:31500,14:33500,15:34500,16:36000,17:37500,18:38500};
-      const getBucket = size => {
-        for (let n=4; n<=18; n++) if (size <= n + 0.5) return n;
-        return Math.ceil(size);
-      };
-      const bucket = getBucket(sysSize);
-      let systemCost = priceMap[bucket] || sysSize * (sysSize>=10?2850:sysSize>=9?3100:sysSize>=8?3400:sysSize>=7?3600:sysSize>=6?4000:4500);
-      const estCost = 'RM ' + systemCost.toLocaleString('en-MY');
-
-      const panelKW = 0.62;
-      const numPanels = Math.ceil(sysSize / panelKW);
-      const roofSpace = (numPanels * 4 * 8).toFixed(0);
-
-      // 隐藏表单，显示结果
-      document.getElementById('formArea').style.display = 'none';
-      const out = document.getElementById('output');
-      out.style.display = 'block';
-      out.innerHTML = `
-        <h3>📋 Result Summary</h3>
-        <table>
-          <tr><th>Customer Name</th><td>${cust}</td></tr>
-          <tr><th>Location</th><td>${loc}</td></tr>
-          <tr><th>Current TNB Bill</th><td>RM ${bill.toFixed(2)}</td></tr>
-          <tr><th>Estimated Monthly Usage</th><td>${kWh.toFixed(0)} kWh</td></tr>
-          <tr><th>Inverter Size</th><td>${sysSize.toFixed(2)} kW</td></tr>
-          <tr><th># of 620W Panels</th><td>${numPanels} units</td></tr>
-          <tr><th>Daily Production</th><td style="color:green;font-weight:bold;">≈ ${numPanels}×0.62×4 = ${(numPanels*0.62*4).toFixed(2)} kWh/day</td></tr>
-          <tr><th>Monthly Savings</th><td style="color:green;font-weight:bold;">≈ ${(numPanels*0.62*4*30).toFixed(2)} kWh/month ≈ RM ${(numPanels*0.62*4*30*0.5).toFixed(2)}</td></tr>
-          <tr><th>Roof Space Needed</th><td>${roofSpace} sq ft</td></tr>
-          <tr><th>Est. System Cost</th><td style="color:#cc3300;font-weight:bold;">${estCost}</td></tr>
-          <tr>
-            <td colspan="2">
-              <div style="margin-top:12px;padding:12px;background:#eaf4ff;border:1px solid #0077cc;border-radius:10px;text-align:center;font-size:16px;">
-                <span style="color:#cc0000;">📞</span>
-                <span style="color:#004080;"> Speak with our Solar Consultant:</span><br>
-                <span style="color:#0077cc;font-weight:bold;">DavidLim <span style="color:#0077cc;">📱</span> 016-553-7788</span>
-              </div>
-            </td>
-          </tr>
-        </table>
-      `;
-      // 延迟调用地图初始化，确保容器渲染完成
-      setTimeout(() => initMap(loc, numPanels), 300);
+      // 这里可以放更多计算结果到 output……
+      document.getElementById('output').innerHTML = '<p>请用左侧画笔工具在地图上框选屋顶区域。</p>';
+      document.getElementById('output').style.display = 'block';
     }
 
-    // 初始化卫星地图
-    function initMap(locText, total) {
-      const m = locText.match(/\(([-\d.]+),\s*([-\d.]+)\)/);
-      if (!m) return;
-      const lat = +m[1], lon = +m[2];
+    function initMap() {
+      if (map) map.remove();  // 清除旧地图
+      map = L.map('roofMap').setView([4.5774,101.1275], 19);
 
-      const map = L.map('roofMap').setView([lat, lon], 19);
-
-      // Esri World Imagery 卫星底图
+      // 卫星底图
       L.tileLayer(
         'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-        {
-          attribution: 'Tiles © Esri &mdash; Source: Esri, USDA, USGS, AeroGRID, IGN, IGP, UPR-EGP, and GIS User Community',
-          maxZoom: 19
-        }
+        { attribution:'Tiles © Esri', maxZoom: 19 }
       ).addTo(map);
 
-      // 屋顶标记
-      L.marker([lat, lon]).addTo(map).bindPopup('Your Roof').openPopup();
+      // 画图图层
+      drawnItems = new L.FeatureGroup();
+      map.addLayer(drawnItems);
 
-      // 可选：面板覆盖示例
-      const dLat = 0.00006, dLon = 0.00006, perRow = 2, rows = Math.ceil(total / perRow);
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < perRow; c++) {
-          const idx = r * perRow + c;
-          if (idx >= total) break;
-          const olat = lat - r * dLat, olon = lon + c * dLon;
-          L.imageOverlay('overlay.png', [[olat, olon], [olat + dLat, olon + dLon]], { opacity: 0.8 }).addTo(map);
+      // Draw 控件
+      const drawControl = new L.Control.Draw({
+        draw: { polyline:false, circle:false, circlemarker:false, marker:false, rectangle:false, polygon:{allowIntersection:false, showArea:true} },
+        edit: { featureGroup: drawnItems, remove:true }
+      });
+      map.addControl(drawControl);
+
+      // 创建完成时绘制面板
+      map.on(L.Draw.Event.CREATED, function(e){
+        drawnItems.clearLayers();
+        const polygon = e.layer;
+        drawnItems.addLayer(polygon);
+        drawPanels(polygon);
+      });
+    }
+
+    // 在多边形内部等距铺排面板（示例：每块约0.00004度大小）
+    function drawPanels(polygon) {
+      const bounds = polygon.getBounds();
+      const dx = 0.00004, dy = 0.00004;
+
+      for (let lat=bounds.getSouth(); lat<bounds.getNorth(); lat+=dy) {
+        for (let lon=bounds.getWest(); lon<bounds.getEast(); lon+=dx) {
+          const pt = L.latLng(lat, lon);
+          if (polygon.getBounds().contains(pt) && polygon.getLatLngs()[0].some(polyPt=>polygon.contains(pt))) {
+            // 用黄色半透明矩形表示面板
+            const sw = [lat, lon], ne = [lat+dy, lon+dx];
+            L.rectangle([sw, ne], {color:'#ffaa00', weight:1, fillOpacity:0.6}).addTo(map);
+          }
         }
       }
     }
