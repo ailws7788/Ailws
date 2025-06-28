@@ -39,6 +39,7 @@
 </div>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
+  // 自动检测定位并填充 location 输入框
   window.onload = function() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(function(pos) {
@@ -67,6 +68,7 @@
       return;
     }
 
+    // 用电量和系统大小
     const kWh = bill / 0.5;
     let systemSize = kWh / 130;
     const lowerBound = Math.floor(systemSize);
@@ -74,6 +76,7 @@
       systemSize = lowerBound + 1;
     }
 
+    // 价格映射
     const priceMap = {4:16000,5:17500,6:18500,7:20500,8:21500,9:23000,10:25000,11:27000,12:29500,13:31500,14:33500,15:34500,16:36000,17:37500,18:38500};
     function getBucket(size) {
       for (let n = 4; n <= 18; n++) {
@@ -85,10 +88,15 @@
     const systemCost = priceMap[bucket] || 0;
     const estCost = "RM " + systemCost.toLocaleString("en-MY");
 
+    // 每kW成本
+    const costPerKW = systemSize > 0 ? (systemCost / systemSize).toFixed(2) : 0;
+
+    // 面板数量和屋顶空间
     const panelKW = 0.62;
     const numPanels = Math.ceil(systemSize / panelKW);
     const roofSpace = (numPanels * 4 * 8).toFixed(0);
 
+    // 隐藏表单，显示结果
     document.getElementById("formArea").style.display = "none";
     const output = document.getElementById("output");
     output.style.display = "block";
@@ -100,6 +108,7 @@
         <tr><th>Current TNB Bill</th><td>RM ${bill.toFixed(2)}</td></tr>
         <tr><th>Estimated Monthly Usage</th><td>${kWh.toFixed(0)} kWh</td></tr>
         <tr><th>Inverter Size</th><td>${systemSize.toFixed(2)} kW</td></tr>
+        <tr><th>Cost per kW</th><td>RM ${costPerKW}</td></tr>
         <tr><th>Estimated No. of 620W Panels</th><td>${numPanels} units</td></tr>
         <tr><th>Daily Energy Production</th><td style="color:green;font-weight:bold;">≈ ${numPanels} × 0.62 × 4 = ${(numPanels * 0.62 * 4).toFixed(2)} kWh/day</td></tr>
         <tr><th>Estimated Monthly Savings</th><td style="color:green;font-weight:bold;">≈ ${(numPanels * 0.62 * 4 * 30).toFixed(2)} kWh/month ≈ RM ${(numPanels * 0.62 * 4 * 30 * 0.5).toFixed(2)}</td></tr>
@@ -114,6 +123,7 @@
       <div id="roofMap"></div>
     `;
 
+    // 延迟初始化地图
     setTimeout(() => {
       const match = location.match(/\(([-\d.]+),\s*([-\d.]+)\)/);
       if (match) {
